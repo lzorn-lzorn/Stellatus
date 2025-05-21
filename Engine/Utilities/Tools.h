@@ -1,5 +1,5 @@
 #pragma once
-#include "Def.h"
+#include "Stellatus.h"
 #include <type_traits>
 #include <memory>
 namespace Stellatus::tools {
