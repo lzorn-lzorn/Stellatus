@@ -7,7 +7,7 @@ project(
     VERSION 0.1.0
 )
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(BUILD_SHARED_LIBS OFF)
 
@@ -26,7 +26,7 @@ set(EXTREN_EXTERN_DIR "${Stellatus_ROOT_DIR}/Extern")
 # , 配置文件路径, 使用时读取的配置文件路径
 set(CONFIG_DIR, "${Stellatus_ROOT_DIR}/Configs/UserConfigs")
 # , 配置文件路径, 开发者内部的配置文件路径
-set(CMAKE_INSTALL_PREFIX "${Stellatus_ROOT_DIR}")
+# set(CMAKE_INSTALL_PREFIX "${Stellatus_ROOT_DIR}")
 
 if (WIN32)
     # , Windows下的输出路径
@@ -50,7 +50,7 @@ else()
     message(FATAL_ERROR "Unknown Platform")
 endif()
 
-set(CMAKE_INSTALL_PREFEIX "${Stellatus_EXE_DIR}")
+# set(CMAKE_INSTALL_PREFEIX "${Stellatus_EXE_DIR}")
 
 include(CMakeTools/CMakeTools.cmake)
 
