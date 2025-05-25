@@ -1,5 +1,4 @@
-# note: 强制生成静态库
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
 
 # , 导入imgui
 # if(NOT TARGET imgui)
