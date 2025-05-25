@@ -1,3 +1,16 @@
-[submodule "Extern/Extern/SDL"]
-	path = Extern/Extern/SDL
+
+[submodule "Extern/SDL"]
+	path = Extern/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "Extern/imgui"]
+	path = Extern/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "Extern/tinyobjloader"]
+	path = Extern/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "Extern/ufbx"]
+	path = Extern/ufbx
+	url = https://github.com/ufbx/ufbx.git
+[submodule "Extern/glfw"]
+	path = Extern/glfw
+	url = https://github.com/glfw/glfw.git
