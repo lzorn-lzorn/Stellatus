@@ -18,24 +18,41 @@ set(CMAKE_BUILD_TYPE Debug)
 # , 项目路径
 set(Stellatus_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 # , 引擎路径
-set(Stellatus_ENGINE_DIR "${Stellatus_ROOT_DIR}/Engine")
+set(Stellatus_ENGINE_DIR "${Stellatus_RObOT_DIR}/Engine")
+
 # , 第三方库路径
-set(Stellatus_THIRDPARTY_DIR "${Stellatus_ENGINE_DIR}/Lib")
+set(EXTREN_EXTERN_DIR "${Stellatus_ROOT_DIR}/Extern")
 
-# , Windows下的输出路径
-# note: Windows 下 dll 和 exe 必须在同一个目录下
-set(Stellatus_Windows_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/Win")
-set(Stellatus_Windows_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/Win")
-set(Stellatus_Windows_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/Win/StaticLib")
+# , 配置文件路径, 使用时读取的配置文件路径
+set(CONFIG_DIR, "${Stellatus_ROOT_DIR}/Configs/UserConfigs")
+# , 配置文件路径, 开发者内部的配置文件路径
+set(CMAKE_INSTALL_PREFIX "${Stellatus_ROOT_DIR}")
 
-# , Linux下的输出路径
-set(Stellatus_Linux_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
-set(Stellatus_Linux_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
-set(Stellatus_Linux_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
+if (WIN32)
+    # , Windows下的输出路径
+    # note: Windows 下 dll 和 exe 必须在同一个目录下
+    set(Stellatus_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/Win")
+    set(Stellatus_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/Win")
+    set(Stellatus_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/Win/StaticLib")
+elseif(UNIX)
+    if(APPLE)
+        # , IOS下的输出路径
+        set(Stellatus_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
+        set(Stellatus_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
+        set(Stellatus_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
+    else()
+        # , Linux下的输出路径
+        set(Stellatus_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
+        set(Stellatus_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
+        set(Stellatus_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/Linux")
+    endif()
+else()
+    message(FATAL_ERROR "Unknown Platform")
+endif()
 
-# , IOS下的输出路径
-set(Stellatus_IOS_DLL_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
-set(Stellatus_IOS_EXE_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
-set(Stellatus_IOS_Lib_DIR "${Stellatus_ROOT_DIR}/Bin/IOS")
+set(CMAKE_INSTALL_PREFEIX "${Stellatus_EXE_DIR}")
+
+include(CMakeTools/CMakeTools.cmake)
+
 
 add_subdirectory(Engine)
