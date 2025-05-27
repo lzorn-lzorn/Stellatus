@@ -380,13 +380,13 @@ namespace Stellatus {
         using reverse_iterator = STD reverse_iterator<iterator>;
         using const_reverse_iterator = STD reverse_iterator<const_iterator>;
     public:
-        _skiplist() : _skiplist(_Alloc()) {};
-        explicit _skiplist(const allocator_type& Alloc = _Alloc()) : _skiplist(Alloc) {
+        _skiplist() : _skiplist(_alloc_type()) {};
+        explicit _skiplist(const allocator_type& Alloc = _alloc_type()) : _skiplist(Alloc) {
 
         }
         template <class Input>
-        _skiplist(Input first, Input last, const allocator_type& alloc = _Alloc()) {}
-        _skiplist(STD initializer_list<value_type> _init_list, const allocator_type& alloc = _Alloc()) {}
+        _skiplist(Input first, Input last, const allocator_type& alloc = _alloc_type()) {}
+        _skiplist(STD initializer_list<value_type> _init_list, const allocator_type& alloc = _alloc_type()) {}
 
         _skiplist(const _skiplist& other) {}
         _skiplist(_skiplist&& other) {}
