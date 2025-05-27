@@ -3,7 +3,7 @@
 #include <random>
 #include <initializer_list>
 #include <iterator>
-#include <array>
+#include <vector>
 #include <optional>
 #include <type_traits>
 #include <memory>
@@ -140,12 +140,15 @@ namespace Stellatus {
         using value_type = _Val_Ty;
 
         struct _control_block {
-            STD atomic<_node_ptr> _m_next{}; // 指向的下一个位置的指针
+            STD atomic<_node_ptr> _m_next{};   // 指向的下一个位置的指针
+            STD atomic<_node_ptr> _m_prev{};
             STD size_t _m_count{ 0ul };        // 改指针对应最底层跨越了多少个节点
             CONSTEXPR _control_block() noexcept
-                : _m_next(nullptr), _m_count(0ul) {}
-            CONSTEXPR _control_block(_node_ptr ptr, STD size_t count) noexcept
-                : _m_next(ptr), _m_count(count) {}
+                : _m_next(nullptr), _m_prev(nullptr), _m_count(0ul) {
+            }
+            CONSTEXPR _control_block(_node_ptr _next, _node_ptr _prev, STD size_t count) noexcept
+                : _m_next(_next), _m_prev(_prev), _m_count(count) {
+            }
             _control_block(const _control_block&) = delete;
             _control_block& operator=(const _control_block&) = delete;
             _control_block(_control_block&&) = delete;
@@ -155,12 +158,12 @@ namespace Stellatus {
         explicit _skip_node(_skip_node_type _type) noexcept
             : _m_type(_type), _m_nexts{} {
             if (_type == _skip_node_type::HEAD) {
-                _m_max_level = _Level;
+                _m_val._m_max_level = _Level;
             }
         }
         ~_skip_node() {
             if (_m_type == _skip_node_type::NORMAL) {
-                _m_data.~value_type();
+                _m_val._m_data.~value_type();
             }
         }
         _skip_node(const _skip_node&) = delete;
@@ -174,7 +177,7 @@ namespace Stellatus {
             // note: 使用 uninitialized_fill 是低效的, 内部是循环调用 operator(const _Ty&)
             // tail node 
             const auto _mem_tail_ptr = alloc.allocate(1);
-            tools::_construct_in_place(_mem_tail_ptr, _type::TAIL);
+            tools::_construct_in_place(_mem_tail_ptr, _skip_node_type::TAIL);
             _mem_tail_ptr->_m_nexts.fill(_control_block{});
             /*for (auto _each : _mem_tail_ptr->_m_nexts) {
                 _each->_m_next = STD nullopt;
@@ -183,7 +186,7 @@ namespace Stellatus {
 
             // head node
             const auto _mem_head_ptr = alloc.allocate(1);
-            tools::_construct_in_place(_mem_head_ptr, _type::HEAD);
+            tools::_construct_in_place(_mem_head_ptr, _skip_node_type::HEAD);
             _mem_head_ptr->_m_nexts.fill(_control_block{});
             for (auto& _each : _mem_head_ptr->_m_nexts) {
                 _each._m_next.store(_mem_tail_ptr, STD memory_order_relaxed);
@@ -202,19 +205,23 @@ namespace Stellatus {
             // 2. 初始化数据成员
             // note: 使用分配器 alloc 在_m_data的地址上用 _val 就地构造 _m_data 对象
             STD allocator_traits<_Alloc>::construct(
-                alloc, 
-                STD addressof(_new_node._m_ptr->_m_data), 
+                alloc,
+                STD addressof(_new_node._m_ptr->_m_val._m_data),
                 STD forward <_ValTy>(_val)...
             );
-            
+
             tools::_construct_in_place(_new_node->_m_ptr, _skip_node_type::NORMAL);
 
             // 3. 初始化层级信息
             const auto _level = _get_level();
+            _new_node._m_ptr->_m_nexts.reserve(_level);
             for (size_t i = 0; i < _level; ++i) {
-                _new_node._m_ptr->_m_nexts[i].emplace(
-                    nullptr; // 初始化 nexts 数组中的指针
-                    0;       // 初始化 count 为 0;
+                _new_node._m_ptr->_m_nexts.emplace_back( 
+                    STD make_optional <_control_block>(
+                        nullptr, // 初始化 next 指针
+                        nullptr, // 初始化 prev 指针
+                        0        // 初始化 count 为 0;
+                    )
                 );
             }
 
@@ -224,30 +231,30 @@ namespace Stellatus {
 
         // @function: 普通的删除只是修改标记
         void _mark_invalid() noexcept {
-            if (this->_m_type == _type::NORMAL) {
-                this->_m_type.store(_type::INVALID, STD memory_order_release);
+            if (this->_m_type == _skip_node_type::NORMAL) {
+                this->_m_type.store(_skip_node_type::INVALID, STD memory_order_release);
                 return;
             }
-            
+
         }
 
         template <class _Alloc>
         static void _free_node(_Alloc& _al, _node_ptr _ptr) noexcept {
             static_assert(STD is_same_v<typename _Alloc::value_type, _skip_node>, "Error _free_node() call");
-            if (_ptr->_m_type != _type::INVALID) {
+            if (!_ptr || _ptr->_m_type == _skip_node_type::HEAD || _ptr->_m_type == _skip_node_type::TAIL) {
                 return;
             }
-            if (_ptr && _ptr->_m_type == _skip_node_type::NORMAL) {
-                STD allocator_traits<_Alloc>::destroy(_al, STD addressof(_ptr->_m_data));
+            if (_ptr->_m_type == _skip_node_type::NORMAL) {
+                STD allocator_traits<_Alloc>::destroy(_al, STD addressof(_ptr->_m_val._m_data));
                 STD allocator_traits<_Alloc>::deallocate(_al, _ptr, 1);
-            }           
+            }
         }
 
         // @function: 释放 head 和 tail 指针
         template <class _Alloc>
         static void _free_head_and_tail(_Alloc& _al, _node_ptr head, _node_ptr tail) noexcept {
             if (head) {
-                // note: head 和 tail 都没有 _m_data; 
+                // note: head 和 tail 都没有 _m_val._m_data; 
                 // note: 无法 STD allocator_traits<_Alloc>::destroy(_al, STD addressof(head->_m_data));
                 // note: 而且析构函数和 alloc 是无关的
                 STD destroy_at(head);
@@ -258,16 +265,16 @@ namespace Stellatus {
                 STD allocator_traits<_Alloc>::deallocate(_al, tail, 1);
             }
         }
-        
+
     public:
-        STD array<STD optional<_control_block>, _Level> _m_nexts{ STD nullopt }; // 指向一些节点的指针们
+        STD vector<STD optional<_control_block>> _m_nexts{ STD nullopt }; // 指向一些节点的指针们
         STD atomic<_skip_node_type> _m_type{ _skip_node_type::INVALID };
         union {
             value_type _m_data{};
             struct {
-                constexpr uint8_t _m_max_level{ _Level };
+                uint8_t _m_max_level;
             };
-        };
+        } _m_val;
     };
     template <class _Val_Ty>
     struct _skip_simple_types : tools::_simple_type< _Val_Ty> {
@@ -278,15 +285,15 @@ namespace Stellatus {
     template <class _Val_Types>
     class _skiplist_val {
     public:
-        using _node_ptr       = typename _Val_Types::_node_ptr;
-        using value_type      = typename _Val_Types::value_type;
-        using size_type       = typename _Val_Types::size_type;
+        using _node_ptr = typename _Val_Types::_node_ptr;
+        using value_type = typename _Val_Types::value_type;
+        using size_type = typename _Val_Types::size_type;
         using difference_type = typename _Val_Types::difference_type;
-        using pointer         = typename _Val_Types::pointer;
-        using const_pointer   = typename _Val_Types::const_pointer;
-        using reference       = value_type&;
+        using pointer = typename _Val_Types::pointer;
+        using const_pointer = typename _Val_Types::const_pointer;
+        using reference = value_type&;
         using const_reference = const value_type&;
-        using const_iterator  = _skip_const_iterator<_skiplist_val>;
+        using const_iterator = _skip_const_iterator<_skiplist_val>;
 
         template <class _AllocNode>
         struct NODISCARD _erase_skip_and_orphan_guard {
@@ -305,14 +312,39 @@ namespace Stellatus {
         template <class _Alnode>
         void _erase_skiplist_and_orphan(_Alnode& _al, _node_ptr _root_node) noexcept {
             while (!_root_node->_is_nil) {
-                _erase_skiplist_and_orphan()
+                _erase_skiplist_and_orphan();
             }
         }
+
+        void _orphan_ptr(const _node_ptr _ptr) noexcept {
+#if _DEBUG
+
+#else
+            (void)_ptr;
+#endif 
+        }
+
+        // @function 插入函数
+        // @param: prevs 是新节点的所有前驱, (prevs 中所有突出来的层和 new_node 的层高是相同的)
+        _node_ptr _insert_node(STD vector<_node_ptr> prevs, _node_ptr new_node) noexcept {
+
+            return new_node;
+        }
+
+        // @function: 只是修改标签
+        void _remove(_node_ptr _node) {
+
+        }
+
+        // @function: 真正的删除节点
+        void _real_remove(_node_ptr _node){}
+
+
     };
     template <typename _Traits>
     class _skiplist {
     public:
-        using key_type = typename _Traits::key_value;
+        using key_type       = typename _Traits::key_value;
         using value_type = typename _Traits::value_type;
         using allocator_type = typename _Traits::allocator_type;
     protected:
@@ -322,15 +354,16 @@ namespace Stellatus {
         using _alloc_node = tools::_rebind_alloc_t<allocator_type, _node>;
         using _alloc_node_traits = STD allocator_traits<_alloc_node>;
         using _node_ptr = typename _alloc_node_traits::pointer;
-        using _val_type = std::conditional_t<tools::_is_simple_alloc_v<_alloc_node>, // 编译期的类型选择器
+        using _val_type = _skiplist_val< STD conditional_t<tools::_is_simple_alloc_v<_alloc_node>, 
             _skip_simple_types<value_type>,
-            _skip_iter_types<value_type,
-            typename _alloc_type_traits::size_type,
-            typename _alloc_type_traits::difference_type,
-            typename _alloc_type_traits::pointer,
-            typename _alloc_type_traits::const_pointer,
-            _node_ptr
-            >
+            _skip_iter_types<
+                value_type,
+                typename _alloc_type_traits::size_type,
+                typename _alloc_type_traits::difference_type,
+                typename _alloc_type_traits::pointer,
+                typename _alloc_type_traits::const_pointer,
+                _node_ptr
+            >>
         >;
     public:
         using key_compare = typename _Traits::key_compare;
@@ -358,6 +391,8 @@ namespace Stellatus {
         _skiplist(const _skiplist& other) {}
         _skiplist(_skiplist&& other) {}
 
+    public:
+        
     public:
         _skiplist& operator=(const _skiplist& other) {}
         _skiplist& operator=(_skiplist&& other) {}
