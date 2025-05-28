@@ -1,7 +1,7 @@
 #pragma once
 #include "../../../Stellatus.h"
+#pragma once
 #include <type_traits>
-#include <random>
 #include <memory>
 namespace Stellatus::tools {
     // 类型处理工具, 实际上 标准库内部都有不同的实现, 这里不依赖任何版本的标准库重新实现一遍
@@ -58,7 +58,7 @@ namespace Stellatus::tools {
     
     template <typename _Ty, typename... _Types>
     CONSTEXPR void _construct_in_place(_Ty& _Obj, _Types&&... _Args)
-        noexcept(STD is_nothrow_constructible_v<_Ty, _Types...>) {
+        noexcept(STDis_nothrow_constructible_v<_Ty, _Types...>) {
 #if HAS_CPP20
         if (STD is_constant_evaluated()) {
             STD construct_at(STD addressof(_Obj), STD forward<_Types>(_Args)...);
@@ -121,17 +121,17 @@ namespace Stellatus::tools {
         }
 
         NODISCARD CONSTEXPR pointer release() noexcept {
-            return STD exchange(_m_ptr, nullptr);
+            return STD exchange(_ptr, nullptr);
         }
 
         CONSTEXPR void _allocate() {
-            _m_ptr = nullptr;
-            _m_ptr = _m_al.allocate(1);
+            _ptr = nullptr;
+            _ptr = _al.allocate(1);
         }
 
         CONSTEXPR ~_alloc_construct_smart_ptr() {
-            if (_m_ptr) {
-                _m_al.deallocate(_m_ptr, 1);
+            if (_ptr) {
+                _al.deallocate(_ptr, 1);
             }
         }
     };
@@ -179,6 +179,82 @@ namespace Stellatus::tools {
         // true：允许直接解引用（发布模式默认）
         // false：在调试模式下触发验证（如边界检查、失效检查）
         static constexpr bool _unwrap_when_unverified = true;
+    };
+
+    // @function 用于对第一个参数进行值初始化的标签类型，然后从剩余参数构造第二个参数
+    struct _zero_then_variadic_args_t {
+        explicit _zero_then_variadic_args_t() = default;
+    };
+
+    // @function 标签类型首先从一个arg构建,从剩余的args中构建第二个
+    struct _one_then_variadic_args_t {
+        explicit _one_then_variadic_args_t() = default;
+    };
+
+    // @function 空基类优化
+    // @static param _Ty1 目标空基类
+    // @static param _Ty2 正常存储的类型
+    // @note: 当 _Ty1 是无状态的比较器 或 无状态内存分配器时, 会进入这个主分支
+    // @note: 通过继承 _Ty1 来节约1Byte的空间
+    template <class _Ty1, class _Ty2, bool = STD is_empty_v<_Ty1> && ! STD is_final_v<_Ty1>>
+    class _compressed_pair final : private _Ty1{
+    public:
+        _Ty2 _val2;
+
+        using base_type = _Ty1;
+
+        // note: 第一个类型 _Ty1 默认构造, 剩下的参数用于构造 _Ty2
+        template <class ... _Other2>
+        constexpr explicit _compressed_pair(_zero_then_variadic_args_t, _Other2&& ... _args_val2)
+            noexcept (STD conjunction_v <STD is_nothrow_default_constructible<_Ty1>, STD is_nothrow_constructible<_Ty2, _Other2...>>)
+            : _Ty1(), _val2(STD forward<_Other2>(_args_val2)...) {
+        }
+
+        // note: 第一个参数用于构造 _Ty1, 剩下的参数用于构造 _Ty2
+        template <class ... _Other1, class ... _Other2>
+        constexpr _compressed_pair(_one_then_variadic_args_t, _Other1&& _arg_val1, Other2&&... _args_val2)
+            noexcept (STD conjunction_v <STD is_nothrow_constructible<_Ty1, _Other1>, STD is_nothrow_constructible<_Ty2, _Other2...>>)
+            : _Ty1(STD forward <_Other1>(_arg_val1)), _val2(STD forward <_Other2>(_args_val2)...) {
+        }
+
+        constexpr _Ty1& _get_first() noexcept {
+            return *this;
+        }
+
+        constexpr const _Ty1& _get_first() const noexcept {
+            return *this;
+        }
+
+    };
+
+    // @function 如果 _Ty1 不是空类, 则是使用默认的存储方式
+    template <class _Ty1, class _Ty2>
+    class _compressed_pair <_Ty1, _Ty2, false> final {
+    public:
+        _Ty1 _val1;
+        _Ty2 _val2;
+
+        // @note: 这里的标签是可以被省略的, 因为构造函数模版编译器会隐式推导
+        template <class ... _Other2>
+        constexpr explicit _compressed_pair(_zero_then_variadic_args_t, _Other2&& ... _arg_val2)
+            noexcept(STD conjunction_v < STD is_nothrow_default_constructible<_Ty1>, STD is_nothrow_constructible<_Ty2, _Other2...>>)
+            : _val1(), _val2(STD forward<_Other>(_arg_val2)...) {
+        }
+
+        template <class _Other1, class ... _Other2>
+        constexpr _compressed_pair(_one_then_variadic_args_t, _Other1&& _arg_val1, _Other2&& ... _args_val2)
+            noexcept(STD conjunction_v < STD is_nothrow_constructible<_Ty1, _Other1>, STD is_nothrow_constructible<_Ty2, _Other2...>>)
+            : _val1(_arg_val1), _val2(STD forward<_Other2>(_args_val2)...) {
+
+        }
+
+        constexpr _Ty1& _get_first() noexcept {
+            return *this;
+        }
+
+        constexpr const _Ty1& _get_first() const noexcept {
+            return *this;
+        }
     };
 
     double get_random_number() {

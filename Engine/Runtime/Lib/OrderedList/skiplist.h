@@ -1,5 +1,6 @@
 #pragma once
 #include "../Utilities/Tools.h"
+// skip.h
 #include <random>
 #include <initializer_list>
 #include <iterator>
@@ -115,19 +116,19 @@ namespace Stellatus {
         }
     };
 
-    template <class _Value_Keype,
-        class _Size_Keype,
-        class _Difference_Keype,
+    template <class _Value_Type,
+        class _Size_Type,
+        class _Difference_Type,
         class _Pointer,
         class _Const_Pointer,
-        class _node_ptr_Keype>
+        class _node_ptr_Type>
     struct _skip_iter_types {
-        using value_type = _Value_Keype;
-        using size_type = _Size_Keype;
-        using difference_type = _Difference_Keype;
+        using value_type = _Value_Type;
+        using size_type = _Size_Type;
+        using difference_type = _Difference_Type;
         using pointer = _Pointer;
         using const_pointer = _Const_Pointer;
-        using _node_ptr = _node_ptr_Keype;
+        using _node_ptr = _node_ptr_Type;
     };
 
     // 代表三种不同类型的节点 头节点, 尾节点, 中间节点
@@ -216,7 +217,7 @@ namespace Stellatus {
             const auto _level = _get_level();
             _new_node._m_ptr->_m_nexts.reserve(_level);
             for (size_t i = 0; i < _level; ++i) {
-                _new_node._m_ptr->_m_nexts.emplace_back( 
+                _new_node._m_ptr->_m_nexts.emplace_back(
                     STD make_optional <_control_block>(
                         nullptr, // 初始化 next 指针
                         nullptr, // 初始化 prev 指针
@@ -337,14 +338,14 @@ namespace Stellatus {
         }
 
         // @function: 真正的删除节点
-        void _real_remove(_node_ptr _node){}
+        void _real_remove(_node_ptr _node) {}
 
 
     };
     template <typename _Traits>
     class _skiplist {
     public:
-        using key_type       = typename _Traits::key_value;
+        using key_type = typename _Traits::key_value;
         using value_type = typename _Traits::value_type;
         using allocator_type = typename _Traits::allocator_type;
     protected:
@@ -354,17 +355,17 @@ namespace Stellatus {
         using _alloc_node = tools::_rebind_alloc_t<allocator_type, _node>;
         using _alloc_node_traits = STD allocator_traits<_alloc_node>;
         using _node_ptr = typename _alloc_node_traits::pointer;
-        using _val_type = _skiplist_val< STD conditional_t<tools::_is_simple_alloc_v<_alloc_node>, 
+        using _val_type = _skiplist_val< STD conditional_t<tools::_is_simple_alloc_v<_alloc_node>,
             _skip_simple_types<value_type>,
             _skip_iter_types<
-                value_type,
-                typename _alloc_type_traits::size_type,
-                typename _alloc_type_traits::difference_type,
-                typename _alloc_type_traits::pointer,
-                typename _alloc_type_traits::const_pointer,
-                _node_ptr
+            value_type,
+            typename _alloc_type_traits::size_type,
+            typename _alloc_type_traits::difference_type,
+            typename _alloc_type_traits::pointer,
+            typename _alloc_type_traits::const_pointer,
+            _node_ptr
             >>
-        >;
+            >;
     public:
         using key_compare = typename _Traits::key_compare;
         using value_compare = typename _Traits::value_compare;
@@ -392,7 +393,7 @@ namespace Stellatus {
         _skiplist(_skiplist&& other) {}
 
     public:
-        
+
     public:
         _skiplist& operator=(const _skiplist& other) {}
         _skiplist& operator=(_skiplist&& other) {}
@@ -401,3 +402,4 @@ namespace Stellatus {
     };
 
 }
+
