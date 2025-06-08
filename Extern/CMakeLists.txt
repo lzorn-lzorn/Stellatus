@@ -8,6 +8,9 @@
 # set_target_properties(imgui PROPERTIES FOLDER ${third_party_folder}/imgui)
 # endif()
 
+# 配置 SDL
+add_subdirectory(SDL)
+
 # , 导入 glfw
 # if(NOT TARGET glfw)
 # option(GLFW_BUILD_EXAMPLES "" OFF)

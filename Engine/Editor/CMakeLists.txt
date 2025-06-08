@@ -18,7 +18,8 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${INCLUDE} ${SOURCE})
 
 add_executable(${TARGET_NAME} ${SOURCE} ${INCLUDE})
 
-target_link_libraries(${TARGET_NAME} Test01)
+target_link_libraries(${TARGET_NAME} PRIVATE Test01)
+target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3)
 
 target_include_directories(${TARGET_NAME} PUBLIC ${INCLUDE})
 # target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
