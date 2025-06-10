@@ -23,6 +23,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3)
 target_link_libraries(${TARGET_NAME} PRIVATE imgui)
 if (OpenGL_FOUND)
     target_link_libraries(${TARGET_NAME} PRIVATE glad)
+    target_link_libraries(${TARGET_NAME} PRIVATE OpenGL::GL)
 endif()
 
 target_include_directories(${TARGET_NAME} PUBLIC ${INCLUDE})
