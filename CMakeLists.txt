@@ -54,6 +54,9 @@ endif()
 
 include(CMakeTools/CMakeTools.cmake)
 
+# 寻找Opengl
+find_package(OpenGL REQUIRED)
+set(OpenGL_FOUND ${OpenGL_FOUND} CACHE INTERNAL "OpenGL found status")
 
 add_subdirectory(Engine)
 add_subdirectory(Extern)

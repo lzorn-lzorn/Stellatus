@@ -20,6 +20,10 @@ add_executable(${TARGET_NAME} ${SOURCE} ${INCLUDE})
 
 target_link_libraries(${TARGET_NAME} PRIVATE Test01)
 target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3)
+target_link_libraries(${TARGET_NAME} PRIVATE imgui)
+if (OpenGL_FOUND)
+    target_link_libraries(${TARGET_NAME} PRIVATE glad)
+endif()
 
 target_include_directories(${TARGET_NAME} PUBLIC ${INCLUDE})
 # target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
